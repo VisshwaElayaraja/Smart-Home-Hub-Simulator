@@ -63,12 +63,12 @@ class Television(SmartDevice):
         self.minimum_volume = 0
 
     def increase_volume(self):
-        if self.volume == self.maximum_volume: print("Volume is at maximum.")
+        if self.volume >= self.maximum_volume: self.volume = self.maximum_volume
         else:self.volume += 1
     
     def decrease_volume(self):
-        if self.volume == self.minimum_volume: print("Volume is at minimum.")
-        else:self.volume -= 1
+        if self.volume <= self.minimum_volume: self.volume = self.minimum_volume
+        else: self.volume -= 1
     
     def change_channel(self, channel_number: int):
         if 0 <= channel_number <= 999:
@@ -123,7 +123,7 @@ class EnvironmentalSensors():
 
         self.motion_detected = r.choice([True, False, False])
 
-        if r.ranint(1, 25) == 1:
+        if r.randint(1, 25) == 1:
             self.global_hazard = r.choice(["Fire", "Gas", "Weather"])
         else: self.global_hazard = None
 
