@@ -1,0 +1,2 @@
+A pure-logic execution simulation mapping the finite states of individual household appliances against critical environment safety constraints.
+📈 This is an evolving sandbox project created for personal learning before university classes start. It will receive continuous feature expansions and architectural adjustments as new ideas strike.
