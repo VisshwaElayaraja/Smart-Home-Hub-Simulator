@@ -7,6 +7,7 @@ import random as r
 # Class & Function Definitions:
 
 class SmartDevice:
+
     def __init__(self, name: str, id: int):
         self.name = name
         self.id = id
@@ -22,14 +23,20 @@ class SmartDevice:
     def increase_idle_ticks(self):
         self.idle_ticks += 1
 
+    def handle_hazards(self):
+        try: raise NotImplementedError("Method must be implemented for all devices.")
+        except NotImplementedError as E: print(E)
+
 
 class AirConditioner(SmartDevice):
+
     def __init__(self, name: str, id: int):
         super().__init__(name, id)
         self.temperature = 24 # Default temperature in Celsius
         self.units = "C"
         self.minimum_temperature = 16
         self.maximum_temperature = 30
+        self.battery_saver = True
 
     def increase_temperature(self):
         if self.temperature == self.maximum_temperature: print("Temperature is at maximum.")
@@ -39,8 +46,15 @@ class AirConditioner(SmartDevice):
         if self.temperature == self.minimum_temperature: print("Temperature is at minimum.")
         else:self.temperature -= 1
 
+    def switch_battery_saver(self):
+        self.battery_saver = not self.battery_saver
+
+    def handle_hazards(self):
+        pass
+
 
 class Television(SmartDevice):
+
     def __init__(self, name: str, id: int):
         super().__init__(name, id)
         self.channel = 0 # Default home screen channel.
@@ -60,6 +74,9 @@ class Television(SmartDevice):
         if 0 <= channel_number <= 999:
             self.channel = channel_number
         else: print("Channel unvailable.")
+    
+    def handle_hazards(self):
+        pass
 
 
 class SmartFan(SmartDevice):
@@ -82,15 +99,66 @@ class SmartFan(SmartDevice):
         if self.speed == self.minimum_speed: print("Speed is at minimum")
         else: self.speed -= 1
         self.auto_power_by_speed()
+    
+    def handle_hazards(self):
+        pass
+
 
 # ===========================================================================
 
+
+class EnvironmentalSensors():
+
+    def __init__(self):
+        pass
+
+    def generate_environmental_variables(self):
+
+        self.power_source = r.choice(["Main", "Main", "Main", "Battery"])
+
+        if r.randint(1, 25) == 1: self.smoke_detected = True
+        else: self.smoke_detected = False
+
+        self.ambient_temperature = r.randint(0, 50)
+
+        self.motion_detected = r.choice([True, False, False])
+
+        if r.ranint(1, 25) == 1:
+            self.global_hazard = r.choice(["Fire", "Gas", "Weather"])
+        else: self.global_hazard = None
+
+
+# ===========================================================================
+
+
 class SimulatorEngine():
     
-    # Objects & Variables:
-    
-    pass
+    def __init__(self):
 
+        self.room_devices = {
+            "Living Room"   : [AirConditioner("AC", 1), Television("TV", 1), SmartFan("Fan", 1)], 
+            "Master Bedroom": [AirConditioner("AC", 2), Television("TV", 2), SmartFan("Fan", 2)], 
+            "Guest Bedroom" : [AirConditioner("AC", 3), SmartFan("Fan", 3)],
+            "Kitchen"       : [AirConditioner("AC", 1)],
+        }
+        self.room_sensors = {
+            "Living Room":    EnvironmentalSensors(),
+            "Master Bedroom": EnvironmentalSensors(),
+            "Guest Bedroom" : EnvironmentalSensors(),
+            "Kitchen"       : EnvironmentalSensors(),
+        }
+    
+    def obtain_sensor_readings(self):
+            for key in self.room_sensors:
+                self.room_sensors[key].generate_environmental_variables()
+
+    def check_for_hazards(self):
+        pass
+
+            
+
+
+# ===========================================================================
 
 
 # MAIN
