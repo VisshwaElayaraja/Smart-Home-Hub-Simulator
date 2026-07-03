@@ -28,7 +28,7 @@ class AirConditioner(SmartDevice):
         super().__init__(name, id)
         self.temperature = 24 # Default temperature in Celsius
         self.units = "C"
-        self.minimum_temperatur = 16
+        self.minimum_temperature = 16
         self.maximum_temperature = 30
 
     def increase_temperature(self):
@@ -57,10 +57,31 @@ class Television(SmartDevice):
         else:self.volume -= 1
     
     def change_channel(self, channel_number: int):
-        if (channel_number > 0) and (len(str(channel_number)) <= 3):
+        if 0 <= channel_number <= 999:
             self.channel = channel_number
-        else: print("Unvailable channel.")
+        else: print("Channel unvailable.")
 
+
+class SmartFan(SmartDevice):
+    def __init__(self, name: str, id: int):
+        super().__init__(name, id)
+        self.speed = 3
+        self.maximum_speed = 6
+        self.minimum_speed = 0
+    
+    def auto_power_by_speed(self):
+        if self.speed == self.minimum_speed: self.is_on = False
+        else: self.is_on = True
+
+    def increase_speed(self):
+        if self.speed == self.maximum_speed: print("Speed is at maximum")
+        else: self.speed += 1
+        self.auto_power_by_speed()
+
+    def decrease_speed(self):
+        if self.speed == self.minimum_speed: print("Speed is at minimum")
+        else: self.speed -= 1
+        self.auto_power_by_speed()
 
 # ===========================================================================
 
@@ -75,5 +96,5 @@ class SimulatorEngine():
 # MAIN
 if __name__ == "__main__":
     
-    print("=== STARTING CONTROL HUM SIMULATOR ===")        
+    print("=== STARTING CONTROL HUB SIMULATOR ===")        
     
