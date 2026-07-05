@@ -23,9 +23,12 @@ class SmartDevice:
     def increase_idle_ticks(self):
         self.idle_ticks += 1
 
-    def handle_hazards(self):
-        try: raise NotImplementedError("Method must be implemented for all devices.")
-        except NotImplementedError as E: print(E)
+    def handle_power_outage(self):
+        pass
+    
+    def handle_obstacles(self, sensor_pack):
+        # Enforces all device sub-classes to override this method.
+        raise NotImplementedError(f"Error: {self.__class__.__name__} missing 'handle_obstacles' method.")
 
 
 class AirConditioner(SmartDevice):
@@ -49,8 +52,18 @@ class AirConditioner(SmartDevice):
     def switch_battery_saver(self):
         self.battery_saver = not self.battery_saver
 
-    def handle_hazards(self):
-        pass
+
+    def handle_obstacles(self, sensor_pack):
+        if (sensor_pack.global_hazard == "Fire") or (sensor_pack.smoke_detected):
+            self.Turn_off()
+            log = "[AC TURNED OFF]: Due to undesirable surrounding conditions.."
+            print(log)
+
+        if sensor_pack.ambient_temperature > 36:
+            self.Turn_on()
+            self.temperature = self.minimum_temperature
+            log = "[AC TURNED ON]: Due to high ambient temperature."
+            print(log)
 
 
 class Television(SmartDevice):
@@ -75,8 +88,12 @@ class Television(SmartDevice):
             self.channel = channel_number
         else: print("Channel unvailable.")
     
-    def handle_hazards(self):
-        pass
+    def handle_obstacles(self, sensor_pack):
+        if (sensor_pack.global_hazard == "Fire"):
+            self.Turn_off()
+            log = "[TV TURNED OFF]: Due to undesirable surrounding conditions."
+            print(log)
+        
 
 
 class SmartFan(SmartDevice):
@@ -100,19 +117,16 @@ class SmartFan(SmartDevice):
         else: self.speed -= 1
         self.auto_power_by_speed()
     
-    def handle_hazards(self):
+    def handle_obstacles(self):
         pass
 
 
 # ===========================================================================
 
 
-class EnvironmentalSensors():
+class EnvironmentalSensorSystem():
 
     def __init__(self):
-        pass
-
-    def generate_environmental_variables(self):
 
         self.power_source = r.choice(["Main", "Main", "Main", "Battery"])
 
@@ -123,8 +137,7 @@ class EnvironmentalSensors():
 
         self.motion_detected = r.choice([True, False, False])
 
-        if r.randint(1, 25) == 1:
-            self.global_hazard = r.choice(["Fire", "Gas", "Weather"])
+        if r.randint(1, 25) == 1: self.global_hazard = "Fire"
         else: self.global_hazard = None
 
 
@@ -142,20 +155,17 @@ class SimulatorEngine():
             "Kitchen"       : [AirConditioner("AC", 1)],
         }
         self.room_sensors = {
-            "Living Room":    EnvironmentalSensors(),
-            "Master Bedroom": EnvironmentalSensors(),
-            "Guest Bedroom" : EnvironmentalSensors(),
-            "Kitchen"       : EnvironmentalSensors(),
+            "Living Room":    EnvironmentalSensorSystem(),
+            "Master Bedroom": EnvironmentalSensorSystem(),
+            "Guest Bedroom" : EnvironmentalSensorSystem(),
+            "Kitchen"       : EnvironmentalSensorSystem(),
         }
-    
-    def obtain_sensor_readings(self):
-            for key in self.room_sensors:
-                self.room_sensors[key].generate_environmental_variables()
 
     def check_for_hazards(self):
-        pass
-
+        for key in self.room_sensors:
             
+            if self.room_sensors[key].power_source == "Battery":
+                pass
 
 
 # ===========================================================================
