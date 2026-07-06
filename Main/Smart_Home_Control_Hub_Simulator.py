@@ -1,6 +1,6 @@
 
-import time as t
-import random as r
+import time
+import random as rdm
 
 # ===========================================================================
 
@@ -13,29 +13,39 @@ class SmartDevice:
         self.id = id
         self.is_on = False
         self.idle_ticks = 0
-        
-    def Turn_on(self):
+
+    def Log_Activity(self, log):
+        print(log)
+
+    def turn_on(self):
         self.is_on = True
         
-    def Turn_off(self):
+    def turn_off(self):
         self.is_on = False
         
     def increase_idle_ticks(self):
         self.idle_ticks += 1
 
-    def handle_power_outage(self):
-        pass
+    def motion_automation(self, sensor_pack):
+        if sensor_pack.motion_detected:
+            self.turn_on()
+            self.Log_Activity(f"[{self.name.upper()} TURNED ON]: Due to room occupancy.")
+
+    def handle_power_outage(self, sensor_pack):
+        # Default Rule: If the power source is switched to 'Battery', turn_off all appliances.
+        if sensor_pack.power_source != "Main":
+            self.turn_off()
     
-    def handle_obstacles(self, sensor_pack):
+    def handle_obstacles_and_requirements(self, sensor_pack):
         # Enforces all device sub-classes to override this method.
-        raise NotImplementedError(f"Error: {self.__class__.__name__} missing 'handle_obstacles' method.")
+        raise NotImplementedError(f"Error: {self.__class__.__name__} missing 'handle_obstacles_and_requirements' method.")
 
 
 class AirConditioner(SmartDevice):
 
     def __init__(self, name: str, id: int):
         super().__init__(name, id)
-        self.temperature = 24 # Default temperature in Celsius
+        self.temperature = 24 # Default temperature in Celsius.
         self.units = "C"
         self.minimum_temperature = 16
         self.maximum_temperature = 30
@@ -49,21 +59,27 @@ class AirConditioner(SmartDevice):
         if self.temperature == self.minimum_temperature: print("Temperature is at minimum.")
         else:self.temperature -= 1
 
-    def switch_battery_saver(self):
+    def switch_to_battery_saver(self):
+        self.minimum_temperature = 24
         self.battery_saver = not self.battery_saver
 
+    def handle_power_outage(self, sensor_pack):
+        if sensor_pack.power_source != "Main":
+            self.switch_to_battery_saver()
+            self.Log_Activity("[BATTERY SAVER ON]: Due to power outage.")
 
-    def handle_obstacles(self, sensor_pack):
+    def handle_obstacles_and_requirements(self, sensor_pack):
+        self.motion_automation()
+        self.handle_power_outage()
+
         if (sensor_pack.global_hazard == "Fire") or (sensor_pack.smoke_detected):
-            self.Turn_off()
-            log = "[AC TURNED OFF]: Due to undesirable surrounding conditions.."
-            print(log)
+            self.turn_off()
+            self.Log_Activity("[AC TURNED OFF]: Due to undesirable surrounding conditions..")
 
         if sensor_pack.ambient_temperature > 36:
-            self.Turn_on()
+            self.turn_on()
             self.temperature = self.minimum_temperature
-            log = "[AC TURNED ON]: Due to high ambient temperature."
-            print(log)
+            self.Log_Activity("[AC TURNED ON]: Due to high ambient temperature.")
 
 
 class Television(SmartDevice):
@@ -88,13 +104,14 @@ class Television(SmartDevice):
             self.channel = channel_number
         else: print("Channel unvailable.")
     
-    def handle_obstacles(self, sensor_pack):
-        if (sensor_pack.global_hazard == "Fire"):
-            self.Turn_off()
-            log = "[TV TURNED OFF]: Due to undesirable surrounding conditions."
-            print(log)
-        
+    def handle_obstacles_and_requirements(self, sensor_pack):
+        self.motion_automation()
+        self.handle_power_outage()
 
+        if (sensor_pack.global_hazard == "Fire"):
+            self.turn_off()
+            self.Log_Activity("[TV TURNED OFF]: Due to undesirable surrounding conditions.")
+        
 
 class SmartFan(SmartDevice):
     def __init__(self, name: str, id: int):
@@ -116,28 +133,40 @@ class SmartFan(SmartDevice):
         if self.speed == self.minimum_speed: print("Speed is at minimum")
         else: self.speed -= 1
         self.auto_power_by_speed()
+
+    def handle_power_outage(self, sensor_pack):
+        if sensor_pack.power_source != "Main":
+            self.speed = 1
+            self.maximum_speed = 2
     
-    def handle_obstacles(self):
-        pass
+    def handle_obstacles_and_requirements(self, sensor_pack):
+        self.motion_automation()
+        self.handle_power_outage()
+
+        if (sensor_pack.global_hazard == "Fire") or (sensor_pack.smoke_detected):
+            self.turn_on()
+            self.speed == self.maximum_speed
+            self.Log_Activity("[Fan Set to Max Speed]: To eliminate undesirable surrounding conditions.")
+
 
 
 # ===========================================================================
 
 
-class EnvironmentalSensorSystem():
+class EnvironmentSensorSystem():
 
     def __init__(self):
 
-        self.power_source = r.choice(["Main", "Main", "Main", "Battery"])
+        self.power_source = rdm.choice(["Main", "Main", "Main", "Battery"])
 
-        if r.randint(1, 25) == 1: self.smoke_detected = True
+        if rdm.randint(1, 20) == 1: self.smoke_detected = True
         else: self.smoke_detected = False
 
-        self.ambient_temperature = r.randint(0, 50)
+        self.ambient_temperature = rdm.randint(0, 50)
 
-        self.motion_detected = r.choice([True, False, False])
+        self.motion_detected = rdm.choice([True, False, False])
 
-        if r.randint(1, 25) == 1: self.global_hazard = "Fire"
+        if rdm.randint(1, 20) == 1: self.global_hazard = "Fire"
         else: self.global_hazard = None
 
 
@@ -147,25 +176,33 @@ class EnvironmentalSensorSystem():
 class SimulatorEngine():
     
     def __init__(self):
-
         self.room_devices = {
             "Living Room"   : [AirConditioner("AC", 1), Television("TV", 1), SmartFan("Fan", 1)], 
             "Master Bedroom": [AirConditioner("AC", 2), Television("TV", 2), SmartFan("Fan", 2)], 
             "Guest Bedroom" : [AirConditioner("AC", 3), SmartFan("Fan", 3)],
             "Kitchen"       : [AirConditioner("AC", 1)],
         }
+
+    def generate_sensor_system(self):
         self.room_sensors = {
-            "Living Room":    EnvironmentalSensorSystem(),
-            "Master Bedroom": EnvironmentalSensorSystem(),
-            "Guest Bedroom" : EnvironmentalSensorSystem(),
-            "Kitchen"       : EnvironmentalSensorSystem(),
+            "Kitchen"       : EnvironmentSensorSystem(),
+            "Living Room":    EnvironmentSensorSystem(),
+            "Master Bedroom": EnvironmentSensorSystem(),
+            "Guest Bedroom" : EnvironmentSensorSystem(),
         }
 
-    def check_for_hazards(self):
-        for key in self.room_sensors:
+    def manage_obstacles_and_requirements(self):
+        for room, device_list in self.room_devices.items():
+            current_system = self.room_sensors[room]
+
+            for device in device_list:
+                device.handle_obstacles_and_requirements(current_system)
+
+    def start_engine(self):
+        
+        while True:
             
-            if self.room_sensors[key].power_source == "Battery":
-                pass
+            time.sleep(1)
 
 
 # ===========================================================================
