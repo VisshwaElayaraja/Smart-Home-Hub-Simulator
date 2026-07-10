@@ -233,7 +233,7 @@ if __name__ == "__main__":
             print(Error)
 
     def Main():
-        Engine.start_engine()
+        Engine.start_engine(sleep_time)
 
     print("=== STARTING CONTROL HUB SIMULATOR ===")
     print(f"[   NOTE: EVERY {sleep_time} SECONDS IS COUNTED AS 1 SECOND IN THIS SIMULATOR   ]")     # Configurable sleep time for user preference and flexibility.
