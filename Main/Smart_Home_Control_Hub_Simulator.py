@@ -1,6 +1,6 @@
 
 import time
-import random as rdm
+import random
 
 # ===========================================================================
 
@@ -23,23 +23,22 @@ class SmartDevice:
         
     def turn_off(self):
         self.is_on = False
-        
-    def increase_idle_ticks(self):
-        self.idle_ticks += 1
 
+    def has_idle_timed_out(self):
+        if self.idle_ticks == self.maximum_idle_time:
+            self.turn_off()
+            self.idle_ticks = 0
+        
     def automated_motion_detection(self, sensor_pack):
-        if sensor_pack.motion_detected:
+        if sensor_pack.motion_detected and (not self.is_on):
             self.turn_on()
             self.Log_Activity(f"[{self.name.upper()} TURNED ON]: Due to room occupancy.")
         else:
             self.idle_ticks += 1
-            if self.idle_ticks == self.maximum_idle_time:
-                self.idle_ticks = 0
-                self.turn_off()
 
     def handle_power_outage(self, sensor_pack):
         # Default Rule: If the power source is switched to 'Battery', turn_off all appliances.
-        if sensor_pack.power_source != "Main":
+        if sensor_pack.power_source != "Main" and (self.is_on):
             self.turn_off()
     
     def handle_obstacles_and_requirements(self, sensor_pack):
@@ -55,7 +54,7 @@ class AirConditioner(SmartDevice):
         self.units = "C"
         self.minimum_temperature = 16
         self.maximum_temperature = 30
-        self.battery_saver = True
+        self.battery_saver_is_on = False
 
     def increase_temperature(self):
         if self.temperature == self.maximum_temperature: print("Temperature is at maximum.")
@@ -65,27 +64,33 @@ class AirConditioner(SmartDevice):
         if self.temperature == self.minimum_temperature: print("Temperature is at minimum.")
         else:self.temperature -= 1
 
-    def switch_to_battery_saver(self):
-        self.minimum_temperature = 24
-        self.battery_saver = not self.battery_saver
+    def switch_battery_saver(self):
+        self.battery_saver_is_on = not self.battery_saver_is_on
+        if self.battery_saver_is_on: self.minimum_temperature = 24
+        else: self.minimum_temperature = 16
 
     def handle_power_outage(self, sensor_pack):
-        if sensor_pack.power_source != "Main":
-            self.switch_to_battery_saver()
-            self.Log_Activity("[BATTERY SAVER ON]: Due to power outage.")
+        if sensor_pack.power_source != "Main" and (not self.battery_saver_is_on):
+            self.switch_battery_saver()
+            self.Log_Activity("[AC BATTERY SAVER ON]: Due to power outage.")
+        elif sensor_pack.power_source == "Main" and (self.battery_saver_is_on):
+            self.switch_battery_saver()
+            self.Log_Activity("[AC BATTERY SAVER OFF]: Due to power restoration.")
 
     def handle_obstacles_and_requirements(self, sensor_pack):
         self.automated_motion_detection(sensor_pack)
         self.handle_power_outage(sensor_pack)
 
-        if (sensor_pack.global_hazard == "Fire") or (sensor_pack.smoke_detected):
+        if (sensor_pack.global_hazard == "Fire" or sensor_pack.smoke_detected) and (self.is_on):
             self.turn_off()
-            self.Log_Activity("[AC TURNED OFF]: Due to undesirable surrounding conditions..")
+            self.Log_Activity("[AC TURNED OFF]: Due to undesirable surrounding conditions.")
 
-        if sensor_pack.ambient_temperature > 36:
+        if sensor_pack.ambient_temperature > 36  and (not self.is_on):
             self.turn_on()
             self.temperature = self.minimum_temperature
             self.Log_Activity("[AC TURNED ON]: Due to high ambient temperature.")
+
+        self.has_idle_timed_out()
 
 
 class Television(SmartDevice):
@@ -114,10 +119,12 @@ class Television(SmartDevice):
         self.automated_motion_detection(sensor_pack)
         self.handle_power_outage(sensor_pack)
 
-        if (sensor_pack.global_hazard == "Fire"):
+        if (sensor_pack.global_hazard == "Fire") and (self.is_on):
             self.turn_off()
             self.Log_Activity("[TV TURNED OFF]: Due to undesirable surrounding conditions.")
-        
+
+        self.has_idle_timed_out()
+
 
 class SmartFan(SmartDevice):
     def __init__(self, name: str, id: int):
@@ -144,16 +151,20 @@ class SmartFan(SmartDevice):
         if sensor_pack.power_source != "Main":
             self.speed = 1
             self.maximum_speed = 2
+        elif sensor_pack.power_source == "Main" and (self.maximum_speed != 6):
+            self.speed = 3
+            self.maximum_speed = 6
     
     def handle_obstacles_and_requirements(self, sensor_pack):
         self.automated_motion_detection(sensor_pack)
         self.handle_power_outage(sensor_pack)
 
-        if (sensor_pack.global_hazard == "Fire") or (sensor_pack.smoke_detected):
+        if (sensor_pack.global_hazard == "Fire" or sensor_pack.smoke_detected) and (not self.is_on):
             self.turn_on()
-            self.speed == self.maximum_speed
+            self.speed = self.maximum_speed
             self.Log_Activity("[Fan Set to Max Speed]: To eliminate undesirable surrounding conditions.")
 
+        self.has_idle_timed_out()
 
 
 # ===========================================================================
@@ -161,18 +172,18 @@ class SmartFan(SmartDevice):
 
 class EnvironmentSensorSystem():
 
-    def __init__(self):
+    power_source = random.choice(["Main", "Main", "Main", "Battery"])
 
-        self.power_source = rdm.choice(["Main", "Main", "Main", "Battery"])
+    def generate_sensor_readings(self):
 
-        if rdm.randint(1, 20) == 1: self.smoke_detected = True
+        if random.randint(1, 20) == 1: self.smoke_detected = True
         else: self.smoke_detected = False
 
-        self.ambient_temperature = rdm.randint(0, 50)
+        self.ambient_temperature = random.randint(0, 50)
 
-        self.motion_detected = rdm.choice([True, False, False])
+        self.motion_detected = random.choice([True, False, False])
 
-        if rdm.randint(1, 20) == 1: self.global_hazard = "Fire"
+        if random.randint(1, 20) == 1: self.global_hazard = "Fire"
         else: self.global_hazard = None
 
 
@@ -189,33 +200,36 @@ class SimulatorEngine():
             "Kitchen"       : [AirConditioner("AC", 1)],
         }
 
-    def generate_sensor_system(self):
-        self.room_sensors = {
-            "Kitchen"       : EnvironmentSensorSystem(),
+        self.room_sensor_systems = {
             "Living Room":    EnvironmentSensorSystem(),
             "Master Bedroom": EnvironmentSensorSystem(),
             "Guest Bedroom" : EnvironmentSensorSystem(),
+            "Kitchen"       : EnvironmentSensorSystem(),
         }
 
     def manage_obstacles_and_requirements(self):
-        for room, device_list in self.room_devices.items():
-            current_system = self.room_sensors[room]
-
-            for device in device_list:
-                device.handle_obstacles_and_requirements(current_system)
+        for no, (room, device_list) in enumerate(self.room_devices.items(), 1):
+            if room in self.room_sensor_systems:
+                current_system = self.room_sensor_systems[room]
+                print(f"{no}) Devices of {room.upper()}:")
+                for device in device_list:
+                    device.handle_obstacles_and_requirements(current_system)
+                print()
 
     def start_engine(self, sleep_time):
         run_time = 0
         while True:
             
-            print(f"===== RUN TIME : {run_time} =====")  
+            print(f"\n*****===== RUN TIME : {run_time} =====*****")  
 
-            self.generate_sensor_system()
+            for room in self.room_devices.keys():
+                self.room_sensor_systems[room].generate_sensor_readings()
 
             self.manage_obstacles_and_requirements()
 
+            run_time += 1
             time.sleep(sleep_time)
-
+            # cmd = input("Press 'Enter' (or) 'Return' to continue: ")
 
 # ===========================================================================
 
@@ -235,7 +249,6 @@ if __name__ == "__main__":
     def Main():
         Engine.start_engine(sleep_time)
 
-    print("=== STARTING CONTROL HUB SIMULATOR ===")
+    print("\n=== STARTING CONTROL HUB SIMULATOR ===")
     print(f"[   NOTE: EVERY {sleep_time} SECONDS IS COUNTED AS 1 SECOND IN THIS SIMULATOR   ]")     # Configurable sleep time for user preference and flexibility.
-
     Main()
