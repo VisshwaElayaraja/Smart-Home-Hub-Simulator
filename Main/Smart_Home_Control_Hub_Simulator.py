@@ -81,7 +81,7 @@ class AirConditioner(SmartDevice):
         self.automated_motion_detection(sensor_pack)
         self.handle_power_outage(sensor_pack)
 
-        if (sensor_pack.global_hazard == "Fire" or sensor_pack.smoke_detected) and (self.is_on):
+        if (sensor_pack.critical_hazard == "Fire" or sensor_pack.smoke_detected) and (self.is_on):
             self.turn_off()
             self.Log_Activity("[AC TURNED OFF]: Due to undesirable surrounding conditions.")
 
@@ -119,7 +119,7 @@ class Television(SmartDevice):
         self.automated_motion_detection(sensor_pack)
         self.handle_power_outage(sensor_pack)
 
-        if (sensor_pack.global_hazard == "Fire") and (self.is_on):
+        if (sensor_pack.critical_hazard == "Fire") and (self.is_on):
             self.turn_off()
             self.Log_Activity("[TV TURNED OFF]: Due to undesirable surrounding conditions.")
 
@@ -159,7 +159,7 @@ class SmartFan(SmartDevice):
         self.automated_motion_detection(sensor_pack)
         self.handle_power_outage(sensor_pack)
 
-        if (sensor_pack.global_hazard == "Fire" or sensor_pack.smoke_detected) and (not self.is_on):
+        if (sensor_pack.critical_hazard == "Fire" or sensor_pack.smoke_detected) and (not self.is_on):
             self.turn_on()
             self.speed = self.maximum_speed
             self.Log_Activity("[Fan Set to Max Speed]: To eliminate undesirable surrounding conditions.")
@@ -172,19 +172,24 @@ class SmartFan(SmartDevice):
 
 class EnvironmentSensorSystem():
 
-    power_source = random.choice(["Main", "Main", "Main", "Battery"])
+    power_source = "Main"
+    critical_hazard = None
 
-    def generate_sensor_readings(self):
+    @classmethod
+    def generate_central_sensor_readings(cls):
+        cls.power_source = random.choice(["Main", "Main", "Main", "Battery"])
 
+        if random.randint(1, 20) == 1: cls.critical_hazard = "Fire"
+        else: cls.critical_hazard = None
+
+
+    def generate_room_sensor_readings(self):
         if random.randint(1, 20) == 1: self.smoke_detected = True
         else: self.smoke_detected = False
 
         self.ambient_temperature = random.randint(0, 50)
 
         self.motion_detected = random.choice([True, False, False])
-
-        if random.randint(1, 20) == 1: self.global_hazard = "Fire"
-        else: self.global_hazard = None
 
 
 # ===========================================================================
@@ -222,8 +227,9 @@ class SimulatorEngine():
             
             print(f"\n*****===== RUN TIME : {run_time} =====*****")  
 
+            EnvironmentSensorSystem.generate_central_sensor_readings()
             for room in self.room_devices.keys():
-                self.room_sensor_systems[room].generate_sensor_readings()
+                self.room_sensor_systems[room].generate_room_sensor_readings()
 
             self.manage_obstacles_and_requirements()
 
