@@ -13,7 +13,7 @@ class SmartDevice:
         self.id = id
         self.is_on = False
         self.idle_ticks = 0
-        self.maximum_idle_time = 20
+        self.maximum_idle_time = 10
 
     def Log_Activity(self, log):
         print(log)
@@ -24,17 +24,16 @@ class SmartDevice:
     def turn_off(self):
         self.is_on = False
 
-    def has_idle_timed_out(self):
-        if self.idle_ticks == self.maximum_idle_time:
+    def check_idle_time_out(self):
+        if self.idle_ticks == self.maximum_idle_time and (self.is_on):
             self.turn_off()
             self.idle_ticks = 0
+            self.Log_Activity(f"[{self.name.upper()} TURNED OFF]: Due to inactivity.")
         
     def automated_motion_detection(self, sensor_pack):
         if sensor_pack.motion_detected and (not self.is_on):
             self.turn_on()
             self.Log_Activity(f"[{self.name.upper()} TURNED ON]: Due to room occupancy.")
-        else:
-            self.idle_ticks += 1
 
     def handle_power_outage(self, sensor_pack):
         # Default Rule: If the power source is switched to 'Battery', turn_off all appliances.
@@ -79,6 +78,7 @@ class AirConditioner(SmartDevice):
 
     def handle_obstacles_and_requirements(self, sensor_pack):
         self.automated_motion_detection(sensor_pack)
+        self.check_idle_time_out()
         self.handle_power_outage(sensor_pack)
 
         if (sensor_pack.critical_hazard == "Fire" or sensor_pack.smoke_detected) and (self.is_on):
@@ -90,7 +90,7 @@ class AirConditioner(SmartDevice):
             self.temperature = self.minimum_temperature
             self.Log_Activity("[AC TURNED ON]: Due to high ambient temperature.")
 
-        self.has_idle_timed_out()
+        self.idle_ticks += 1
 
 
 class Television(SmartDevice):
@@ -117,13 +117,14 @@ class Television(SmartDevice):
     
     def handle_obstacles_and_requirements(self, sensor_pack):
         self.automated_motion_detection(sensor_pack)
+        self.check_idle_time_out()
         self.handle_power_outage(sensor_pack)
 
         if (sensor_pack.critical_hazard == "Fire") and (self.is_on):
             self.turn_off()
             self.Log_Activity("[TV TURNED OFF]: Due to undesirable surrounding conditions.")
 
-        self.has_idle_timed_out()
+        self.idle_ticks += 1
 
 
 class SmartFan(SmartDevice):
@@ -132,6 +133,7 @@ class SmartFan(SmartDevice):
         self.speed = 3
         self.maximum_speed = 6
         self.minimum_speed = 0
+        self.maximum_idle_time = 15
     
     def auto_power_by_speed(self):
         if self.speed == self.minimum_speed: self.is_on = False
@@ -157,6 +159,7 @@ class SmartFan(SmartDevice):
     
     def handle_obstacles_and_requirements(self, sensor_pack):
         self.automated_motion_detection(sensor_pack)
+        self.check_idle_time_out()
         self.handle_power_outage(sensor_pack)
 
         if (sensor_pack.critical_hazard == "Fire" or sensor_pack.smoke_detected) and (not self.is_on):
@@ -164,7 +167,7 @@ class SmartFan(SmartDevice):
             self.speed = self.maximum_speed
             self.Log_Activity("[Fan Set to Max Speed]: To eliminate undesirable surrounding conditions.")
 
-        self.has_idle_timed_out()
+        self.idle_ticks += 1
 
 
 # ===========================================================================
@@ -247,7 +250,7 @@ if __name__ == "__main__":
 
     while True:
         try:
-            sleep_time = int(input("Enter sleep time for every iteration:   "))
+            sleep_time = float(input("Enter sleep time for every iteration:   "))
             break
         except Exception as Error:
             print(Error)
