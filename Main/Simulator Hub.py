@@ -93,3 +93,5 @@ if __name__ == "__main__":
     print("\n=== STARTING CONTROL HUB SIMULATOR ===")
     print(f"[   NOTE: EVERY {sleep_time} SECONDS IS COUNTED AS 1 SECOND IN THIS SIMULATOR   ]")     # Configurable sleep time for user preference and flexibility.
     Main()
+
+# ===========================================================================

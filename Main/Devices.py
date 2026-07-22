@@ -1,3 +1,4 @@
+
 # Class & Function Definitions:
 
 class SmartDevice:
