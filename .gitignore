@@ -1,3 +1,25 @@
-.venv/
+# --- Python Bytecode & Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual Environments ---
 venv/
+.venv/
+env/
 ENV/
+
+# --- Environment Variables & Secrets ---
+.env
+*.env
+
+# --- IDE & Editor Files ---
+.vscode/
+.idea/
+
+# --- OS Specific Files ---
+.DS_Store
+Thumbs.db
+
+# --- Jupyter Notebook Checkpoints ---
+.ipynb_checkpoints/
